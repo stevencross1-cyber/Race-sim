@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Race Sim">
+<meta name="theme-color" content="#0a0e1a">
+<title>Race Simulator</title>
+
+<!-- PWA Manifest inline -->
+<script>
+const manifestData = {
+  name: "Racing Simulator",
+  short_name: "Race Sim",
+  description: "15-Factor Monte Carlo Racing Simulation Pipeline",
+  start_url: ".",
+  display: "standalone",
+  background_color: "#0a0e1a",
+  theme_color: "#c8a850",
+  orientation: "portrait",
+  icons: [
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230a0e1a'/%3E%3Ctext y='130' x='96' text-anchor='middle' font-size='120' fill='%23c8a850'%3E%F0%9F%8F%87%3C/text%3E%3C/svg%3E", sizes: "192x192", type: "image/svg+xml" },
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230a0e1a'/%3E%3Ctext y='360' x='256' text-anchor='middle' font-size='320' fill='%23c8a850'%3E%F0%9F%8F%87%3C/text%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifestData)], {type:'application/json'});
+const manifestURL = URL.createObjectURL(blob);
+const link = document.createElement('link');
+link.rel = 'manifest';
+link.href = manifestURL;
+document.head.appendChild(link);
+</script>
+
+<!-- Apple touch icon (inline SVG as data URI) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230a0e1a'/%3E%3Ctext y='128' x='90' text-anchor='middle' font-size='110' fill='%23c8a850'%3E%F0%9F%8F%87%3C/text%3E%3C/svg%3E">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=JetBrains+Mono:wght@400;500&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+
+:root {
+  --gold: #c8a850;
+  --gold-light: #f0d060;
+  --gold-dim: rgba(200,168,80,0.15);
+  --bg: #0a0e1a;
+  --bg2: #0f1628;
+  --bg3: #141c2e;
+  --text: #e8dcc8;
+  --text-dim: #7a6a4a;
+  --text-muted: #4a5060;
+  --green: #00e5a0;
+  --red: #ff6b6b;
+  --blue: #88aaff;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Crimson Pro', Georgia, serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Grain texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.4;
+}
+
+/* ── HEADER ── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: linear-gradient(180deg, #12080a 0%, rgba(10,14,26,0.97) 100%);
+  border-bottom: 1px solid rgba(200,168,80,0.3);
+  padding: calc(var(--safe-top) + 12px) 16px 12px;
+  text-align: center;
+  backdrop-filter: blur(20px);
+}
+
+.header-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 4px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.header-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #f0d060, #c8a850, #e8c870);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 1px;
+}
+
+.header-sub {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.status-bar {
+  font-size: 10px;
+  color: var(--green);
+  margin-top: 6px;
+  min-height: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+/* ── NAV TABS ── */
+.nav {
+  display: flex;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(200,168,80,0.1);
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 10px 4px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.nav-btn.active {
+  color: var(--gold-light);
+  border-bottom-color: var(--gold);
+  background: rgba(200,168,80,0.06);
+  font-weight: 700;
+}
+
+/* ── MAIN CONTENT ── */
+.main {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 14px 14px calc(var(--safe-bottom) + 80px);
+}
+
+/* ── RACE CARDS ── */
+.race-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(200,168,80,0.12);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+.race-card.settled { border-color: rgba(0,229,160,0.25); }
+.race-card.pending { border-color: rgba(200,168,80,0.2); }
+
+.race-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.race-venue {
+  font-family: 'Playfair Display', serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.race-name {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 1px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.race-result {
+  text-align: right;
+}
+.race-winner-name {
+  font-size: 10px;
+  color: var(--green);
+  font-weight: 600;
+}
+.auto-tag {
+  font-size: 7px;
+  color: #5a8a7a;
+  font-family: 'JetBrains Mono', monospace;
+}
+.pending-tag {
+  font-size: 9px;
+  background: rgba(244,196,48,0.1);
+  color: #f4c430;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.race-summary {
+  font-size: 9px;
+  color: #5a6a7a;
+  margin-bottom: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.6;
+}
+
+.runners {
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 6px;
+}
+
+.runner-row {
+  display: grid;
+  grid-template-columns: 1fr 30px 34px 40px 28px;
+  gap: 4px;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: opacity 0.2s;
+}
+.runner-row.faded { opacity: 0.35; }
+.runner-row.winner { opacity: 1; }
+
+.runner-name {
+  font-size: 10px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.runner-name.won { color: var(--green); font-weight: 700; }
+
+.runner-odds { font-size: 9px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; text-align: right; }
+.runner-win { font-size: 9px; color: #5a7a9a; font-family: 'JetBrains Mono', monospace; text-align: right; }
+
+.edge-val {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+  font-weight: 600;
+}
+.edge-pos { color: var(--green); }
+.edge-neg { color: var(--red); }
+.edge-neu { color: #6a7a6a; }
+
+.score-val { font-size: 8px; color: #4a5060; font-family: 'JetBrains Mono', monospace; text-align: right; }
+
+/* ── MANUAL ENTRY ── */
+.manual-entry {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.manual-input {
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(200,168,80,0.3);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: 'Crimson Pro', serif;
+  outline: none;
+}
+.manual-input:focus { border-color: var(--gold); }
+.save-btn {
+  background: rgba(0,229,160,0.12);
+  border: 1px solid rgba(0,229,160,0.3);
+  color: var(--green);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: 'Crimson Pro', serif;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  background: var(--gold-dim);
+  border: 1px solid rgba(200,168,80,0.3);
+  color: var(--gold);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 10px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+}
+.btn-blue {
+  background: rgba(136,170,255,0.1);
+  border-color: rgba(136,170,255,0.3);
+  color: var(--blue);
+}
+.btn-sm { padding: 5px 10px; font-size: 9px; }
+
+/* ── CALIBRATION ── */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.cal-stat {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(200,168,80,0.15);
+  border-radius: 10px;
+  padding: 10px 6px;
+  text-align: center;
+}
+.cal-stat-label { font-size: 8px; color: var(--text-muted); margin-bottom: 3px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
+.cal-stat-value { font-size: 16px; font-weight: 700; font-family: 'Playfair Display', serif; }
+
+.cal-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+.cal-table th { font-size: 8px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; padding: 4px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.08); text-transform: uppercase; }
+.cal-table th:first-child { text-align: left; }
+.cal-table td { font-size: 10px; padding: 5px 4px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: right; font-family: 'JetBrains Mono', monospace; }
+.cal-table td:first-child { text-align: left; color: var(--text-dim); }
+
+.info-box {
+  background: rgba(100,150,255,0.05);
+  border: 1px solid rgba(100,150,255,0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 10px;
+  color: #7a8aaa;
+  line-height: 1.8;
+}
+.info-box strong { color: var(--gold); }
+
+.signal-box {
+  background: rgba(244,196,48,0.06);
+  border: 1px solid rgba(244,196,48,0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 10px;
+  color: #c4a030;
+  line-height: 1.7;
+  margin-top: 12px;
+}
+
+/* ── HISTORY DATES ── */
+.date-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.date-pill {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(200,168,80,0.2);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  transition: all 0.15s;
+}
+.date-pill.active, .date-pill:active {
+  background: rgba(200,168,80,0.15);
+  border-color: rgba(200,168,80,0.5);
+  color: var(--gold-light);
+}
+
+/* ── FETCH LOG ── */
+.log-entry {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(136,170,255,0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+
+/* ── INSTALL PROMPT ── */
+.install-banner {
+  background: linear-gradient(135deg, rgba(200,168,80,0.12), rgba(200,168,80,0.04));
+  border: 1px solid rgba(200,168,80,0.4);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.install-title { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--gold-light); margin-bottom: 6px; }
+.install-steps { font-size: 11px; color: var(--text-dim); line-height: 1.8; margin-bottom: 10px; }
+.install-steps span { color: var(--gold); }
+
+/* ── EMPTY STATE ── */
+.empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 12px; line-height: 1.8; }
+
+/* ── DIVIDER LABEL ── */
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin: 12px 0 8px;
+}
+
+/* ── BOT BANNER ── */
+.bot-banner {
+  background: linear-gradient(135deg, rgba(200,168,80,0.12), rgba(200,168,80,0.04));
+  border: 2px solid rgba(200,168,80,0.4);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.bot-horse { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 900; color: var(--gold-light); }
+.bot-race { font-size: 10px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; margin: 2px 0 10px; }
+.bot-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 12px; }
+.bot-stat { background: rgba(0,0,0,0.25); border-radius: 8px; padding: 8px; text-align: center; }
+.bot-stat-label { font-size: 8px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; margin-bottom: 2px; }
+.bot-stat-val { font-size: 14px; font-weight: 700; font-family: 'Playfair Display', serif; }
+
+.record-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+.record-cell { background: rgba(255,255,255,0.04); border: 1px solid rgba(200,168,80,0.15); border-radius: 8px; padding: 8px 4px; text-align: center; }
+.record-label { font-size: 7px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; margin-bottom: 2px; }
+.record-val { font-size: 14px; font-weight: 700; font-family: 'Playfair Display', serif; }
+
+.history-row {
+  background: rgba(255,255,255,0.025);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.history-horse { font-size: 12px; font-weight: 600; font-family: 'Playfair Display', serif; }
+.history-meta { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+.history-result { text-align: right; font-size: 12px; font-weight: 700; font-family: 'Playfair Display', serif; }
+
+/* ── LOADING SPINNER ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(200,168,80,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
+
+/* ── FADE IN ── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.race-card { animation: fadeUp 0.25s ease both; }
+
+/* Row header */
+.col-headers {
+  display: grid;
+  grid-template-columns: 1fr 30px 34px 40px 28px;
+  gap: 4px;
+  font-size: 7px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 0 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 4px;
+}
+.col-headers span { text-align: right; }
+.col-headers span:first-child { text-align: left; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-eyebrow">15-Factor Monte Carlo · v11</div>
+  <div class="header-title">🏇 Race Simulator</div>
+  <div class="header-sub" id="dateDisplay"></div>
+  <div class="status-bar" id="statusBar"></div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="showTab('today')" id="tab-today">Today</button>
+  <button class="nav-btn" onclick="showTab('bod')" id="tab-bod">BotD</button>
+  <button class="nav-btn" onclick="showTab('history')" id="tab-history">History</button>
+  <button class="nav-btn" onclick="showTab('calibration')" id="tab-calibration">Calibration</button>
+  <button class="nav-btn" onclick="showTab('install')" id="tab-install">Install</button>
+</div>
+
+<div class="main">
+  <div id="pane-today"></div>
+  <div id="pane-bod" style="display:none"></div>
+  <div id="pane-history" style="display:none"></div>
+  <div id="pane-calibration" style="display:none"></div>
+  <div id="pane-install" style="display:none"></div>
+</div>
+
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const GOLD = '#c8a850', GREEN = '#00e5a0', RED = '#ff6b6b', BLUE = '#88aaff';
+
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+function yesterdayStr() {
+  const d = new Date(); d.setDate(d.getDate()-1);
+  return d.toISOString().split('T')[0];
+}
+function fmtDate(iso) {
+  return new Date(iso+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+function fmtShort(iso) {
+  return new Date(iso+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+}
+
+const TODAY = todayStr();
+const YESTERDAY = yesterdayStr();
+
+// ── STORAGE ───────────────────────────────────────────────────────────────────
+function store(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); return true; }
+  catch(e) { return false; }
+}
+function load(key) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
+  catch(e) { return null; }
+}
+function allKeys(prefix) {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(prefix)) keys.push(k);
+  }
+  return keys.sort().reverse();
+}
+
+// ── SIMULATION ENGINE ─────────────────────────────────────────────────────────
+function o2p(o) {
+  if (!o) return null;
+  const p = o.split('/'); if (p.length !== 2) return null;
+  const n = parseFloat(p[0]), d = parseFloat(p[1]);
+  return (isNaN(n)||isNaN(d)||d===0) ? null : d/(n+d)*100;
+}
+function mulberry32(a) {
+  return function() {
+    a|=0; a=a+0x6D2B79F5|0;
+    let t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;
+  };
+}
+function gauss(rand) {
+  const u=rand(),v=rand();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+function buildScore(h, topOR) {
+  let s = h.or ? 75+(h.or-topOR)*0.5 : (h.fs||65);
+  s += Math.min((h.tp||0.10)*35,7);
+  s += Math.min((h.jp||0.10)*28,6);
+  if(h.gok===1) s+=4; else if(h.gok===-1) s-=6;
+  s+=(h.gadj||0);
+  if(h.dok===1) s+=3; else if(h.dok===-1) s-=5;
+  if((h.cw||0)>0) s+=3+Math.min(h.cw,2);
+  const d=h.days;
+  if(d!=null){if(d>=14&&d<=35)s+=3;else if(d>60)s-=3;else if(d>45)s-=1;}else s-=1;
+  const a=h.age||8;
+  if(a>=7&&a<=9)s+=2;else if(a===10)s-=2;else if(a>=11)s-=4;
+  s+=(h.mom||0);
+  s+=(h.cdrop||0)*2;
+  const op=o2p(h.open),cp=o2p(h.odds);
+  if(op&&cp){const dr=(cp-op)/op;s+=Math.min(Math.max(dr*8,-3),3);}
+  const style=h.style||'H',pace=h._pace||'even';
+  if(pace==='fast'){if(style==='F')s-=3;if(style==='H')s+=2;}
+  if(pace==='slow'){if(style==='F')s+=3;if(style==='H')s-=2;}
+  if(pace==='vfast'){if(style==='F')s-=6;if(style==='H')s+=4;}
+  return Math.max(5,Math.round(s*10)/10);
+}
+function runSim(runners, bigField, seed) {
+  const rand=mulberry32(seed||99991);
+  const N=5000;
+  const hasOR=runners.some(r=>r.or&&r.or>0);
+  let topOR=0;
+  if(hasOR)runners.forEach(r=>{if((r.or||0)>topOR)topOR=r.or;});
+  const fronts=runners.filter(r=>r.style==='F').length;
+  const pace=fronts>=3?'vfast':fronts===2?'fast':fronts===1?'even':'slow';
+  runners.forEach(r=>r._pace=pace);
+  const wins={},places={};
+  runners.forEach(r=>{wins[r.n]=0;places[r.n]=0;});
+  const plN=bigField?4:3;
+  for(let i=0;i<N;i++){
+    const sc=runners.map(r=>{
+      const base=buildScore(r,topOR);
+      const noise=gauss(rand)*(hasOR?9:11);
+      const interf=(bigField&&rand()<0.08)?-rand()*14:0;
+      return{n:r.n,s:base+noise+interf};
+    });
+    sc.sort((a,b)=>b.s-a.s);
+    sc.forEach((x,pos)=>{if(pos===0)wins[x.n]++;if(pos<plN)places[x.n]++;});
+  }
+  return runners.map(r=>{
+    const wp=wins[r.n]/N*100,pp=places[r.n]/N*100;
+    const mp=o2p(r.odds);
+    const edge=mp?wp-mp:null;
+    return {
+      name:r.n,odds:r.odds,
+      score:Math.round(buildScore(r,topOR)*10)/10,
+      winPct:Math.round(wp*10)/10,
+      placePct:Math.round(pp*10)/10,
+      marketPct:mp?Math.round(mp*10)/10:null,
+      edge:edge?Math.round(edge*10)/10:null,
+      isValue:edge!=null&&edge>2,
+      winner:false
+    };
+  }).sort((a,b)=>(b.edge||-99)-(a.edge||-99));
+}
+
+// ── TODAY'S RACES ─────────────────────────────────────────────────────────────
+// This section is updated by Claude each morning with the day's races
+const TODAY_RACES = [
+  { id:`${TODAY}-FH-1405`, venue:'Fairyhouse', time:'14:05', date:TODAY,
+    race:'Farmhouse Foods Novice Hcp Hurdle', bigField:false,
+    runners:[
+      {n:'Thankyouforthedays',odds:'4/1',open:'5/1',fs:74,gok:1,dok:0,tp:0.12,jp:0.12,cw:1,days:21,age:5,mom:2,style:'P'},
+      {n:'Saveforarainyday',odds:'5/1',open:'6/1',fs:72,gok:1,dok:0,tp:0.23,jp:0.24,cw:0,days:14,age:5,mom:0,style:'H'},
+      {n:'Jet To Monte Carlo',odds:'5/1',open:'5/1',fs:68,gok:1,dok:0,tp:0.14,jp:0.19,cw:0,days:28,age:4,mom:1,style:'H'},
+      {n:'Doctor Elvis',odds:'6/1',open:'6/1',fs:65,gok:1,dok:0,tp:0.14,jp:0.19,cw:0,days:35,age:7,mom:0,style:'H'},
+      {n:'Tir Og',odds:'7/1',open:'8/1',fs:64,gok:1,dok:0,tp:0.08,jp:0.08,cw:0,days:9,age:5,mom:1,style:'P'},
+      {n:'Green Hope',odds:'8/1',open:'8/1',fs:62,gok:1,dok:0,tp:0.14,jp:0.12,cw:0,days:14,age:5,mom:0,style:'H'},
+    ]
+  },
+  { id:`${TODAY}-FH-1700`, venue:'Fairyhouse', time:'17:00', date:TODAY,
+    race:'Irish Grand National', bigField:true,
+    runners:[
+      {n:'Kiss Will',or:139,odds:'6/1',open:'8/1',gok:1,dok:1,tp:0.23,jp:0.24,cw:0,days:35,age:7,mom:2,style:'H',gadj:2},
+      {n:'The Jukebox Kid',or:144,odds:'6/1',open:'5/1',gok:1,dok:1,tp:0.15,jp:0.20,cw:0,days:49,age:7,mom:1,style:'H',gadj:0},
+      {n:'Cest Ta Chance',or:154,odds:'8/1',open:'10/1',gok:1,dok:0,tp:0.23,jp:0.12,cw:0,days:32,age:7,mom:2,style:'F',gadj:2},
+      {n:'Showurappreciation',or:149,odds:'12/1',open:'16/1',gok:1,dok:1,tp:0.12,jp:0.12,cw:0,days:21,age:8,mom:2,style:'H',gadj:1},
+      {n:'Better Days Ahead',or:168,odds:'14/1',open:'16/1',gok:1,dok:1,tp:0.14,jp:0.14,cw:1,days:36,age:8,mom:-1,style:'H',gadj:0},
+      {n:'Argento Boy',or:156,odds:'8/1',open:'8/1',gok:0,dok:0,tp:0.23,jp:0.12,cw:0,days:26,age:7,mom:-1,style:'P',gadj:-2},
+    ]
+  },
+  { id:`${TODAY}-PL-1435`, venue:'Plumpton', time:'14:35', date:TODAY,
+    race:'Sussex Champion Chase', bigField:false,
+    runners:[
+      {n:'Superstylin',or:142,odds:'11/10',open:'11/10',gok:1,dok:0,tp:0.24,jp:0.22,cw:2,days:9,age:9,mom:2,style:'F',gadj:2},
+      {n:'Sanitiser',or:140,odds:'11/4',open:'3/1',gok:1,dok:0,tp:0.18,jp:0.16,cw:0,days:13,age:7,mom:1,style:'F',gadj:2},
+      {n:'Inca De Lafayette',or:138,odds:'3/1',open:'3/1',gok:1,dok:0,tp:0.18,jp:0.15,cw:1,days:30,age:8,mom:0,style:'S',gadj:0},
+      {n:'Matterhorn',or:135,odds:'6/1',open:'8/1',gok:1,dok:0,tp:0.12,jp:0.14,cw:0,days:21,age:7,mom:1,style:'P',gadj:1},
+    ]
+  },
+  { id:`${TODAY}-PL-1655`, venue:'Plumpton', time:'16:55', date:TODAY,
+    race:'Gordon Ashdown Hcp Hurdle', bigField:false,
+    runners:[
+      {n:'Mondo Man',or:115,odds:'2/1',open:'5/2',gok:1,dok:0,tp:0.14,jp:0.14,cw:0,days:14,age:7,mom:2,style:'F',gadj:2},
+      {n:'Stargazer',or:112,odds:'3/1',open:'3/1',gok:1,dok:0,tp:0.16,jp:0.12,cw:0,days:21,age:6,mom:1,style:'P',gadj:1},
+      {n:'Pennine Way',or:108,odds:'4/1',open:'4/1',gok:1,dok:0,tp:0.15,jp:0.15,cw:0,days:28,age:7,mom:0,style:'H',gadj:0},
+      {n:'Fasol',or:100,odds:'10/1',open:'12/1',gok:1,dok:0,tp:0.14,jp:0.14,cw:0,days:21,age:7,mom:1,style:'H',gadj:1},
+    ]
+  },
+  { id:`${TODAY}-KP-1455`, venue:'Kempton', time:'14:55', date:TODAY,
+    race:'Magnolia Stakes Listed', bigField:false,
+    runners:[
+      {n:'Devils Advocate',odds:'7/4',open:'7/4',fs:84,gok:0,dok:1,tp:0.18,jp:0.18,cw:0,days:21,age:5,mom:1,style:'P'},
+      {n:'Champagne Powder',odds:'3/1',open:'3/1',fs:76,gok:0,dok:1,tp:0.14,jp:0.14,cw:0,days:14,age:4,mom:0,style:'F'},
+      {n:'Midnight Rumble',odds:'4/1',open:'4/1',fs:74,gok:0,dok:1,tp:0.20,jp:0.20,cw:0,days:28,age:4,mom:0,style:'H'},
+    ]
+  },
+];
+
+// ── BET OF THE DAY DATA ───────────────────────────────────────────────────────
+const BOD_TODAY = {
+  date:TODAY,horse:'Kiss Will',race:'17:00 Fairyhouse - Irish Grand National',
+  betType:'Each Way',odds:'6/1',ewOdds:'6/4',places:4,
+  edge:'+19.9%',ewEdge:'+54.4%',
+  rationale:[
+    'Highest composite score (113) from 30-runner simulation',
+    'Paul Townend booking - stable jockey chose Kiss Will over stablemates',
+    'Steamed 8/1 to 6/1 - clear market confidence signal',
+    'Proven 3m+ on Yielding ground - conditions match exactly',
+    'Model top-4 probability 79.4% - strong EW case at 6/1 (place pays 6/4)',
+    'Pace map neutral - hold-up style suits big-field National tempo'
+  ],
+  result:null,sp:null
+};
+const BOD_HISTORY_KEY = 'bod_history_v2';
+function getBodHistory() {
+  return load(BOD_HISTORY_KEY) || [{
+    date:'2026-04-05',horse:'Inca De Lafayette',race:'16:40 Plumpton - Sussex Champion Chase',
+    betType:'EW',odds:'3/1',result:'WON',sp:'13/8F',
+    pl:5.00,note:'Model identified pace map advantage (2 front-runners). Won at shorter SP.'
+  }];
+}
+
+// ── AUTO-FETCH YESTERDAY VIA CLAUDE API ───────────────────────────────────────
+async function autoFetchResults(date, preds) {
+  const unsettled = preds.filter(p=>!p.settled);
+  if(!unsettled.length) return null;
+  const raceList = unsettled.map(p=>
+    `${p.venue} ${p.time} "${p.race}" runners: ${p.runners.map(r=>r.name).join(', ')}`
+  ).join('\n');
+  const prompt = `You are a racing results assistant. Find the official race winners for ${fmtDate(date)}.
+
+Races to find:
+${raceList}
+
+Search the web and return ONLY valid JSON, no other text:
+{"date":"${date}","races":[{"venue":"VenueName","time":"HH:MM","winner":"Exact Horse Name","sp":"odds"}]}
+
+If a result is not found, omit that race. Match winner names exactly to the runners listed.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:800,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+    const match = text.match(/\{[\s\S]*"races"[\s\S]*\}/);
+    if(!match) return {races:[],raw:text.substring(0,200)};
+    return JSON.parse(match[0]);
+  } catch(e) {
+    return {races:[],error:e.message};
+  }
+}
+
+function applyResults(preds, fetched) {
+  let settled=0; const errors=[];
+  const updated = preds.map(pred=>{
+    if(pred.settled) return pred;
+    const match = fetched.races?.find(r=>{
+      const vm = r.venue&&pred.venue&&r.venue.toLowerCase().includes(pred.venue.toLowerCase().split(' ')[0]);
+      const tm = r.time&&pred.time&&r.time.replace(':','')===pred.time.replace(':','');
+      return vm&&tm;
+    });
+    if(!match||!match.winner) return pred;
+    const w=match.winner.trim();
+    const found=pred.runners.find(r=>
+      r.name.toLowerCase()===w.toLowerCase()||
+      r.name.toLowerCase().startsWith(w.toLowerCase().split(' ')[0])||
+      w.toLowerCase().startsWith(r.name.toLowerCase().split(' ')[0])
+    );
+    if(!found) errors.push(`${pred.venue} ${pred.time}: "${w}" not matched`);
+    settled++;
+    return {...pred,settled:true,winner:w,sp:match.sp||null,autoSettled:true,
+      runners:pred.runners.map(r=>({...r,winner:found?r.name===found.name:r.name.toLowerCase()===w.toLowerCase()}))
+    };
+  });
+  return {updated,settled,errors};
+}
+
+// ── CALIBRATION ───────────────────────────────────────────────────────────────
+function calcCalibration() {
+  const keys = allKeys('predictions:');
+  const buckets=[
+    {label:'0-10%',min:0,max:10,n:0,correct:0,totalPred:0},
+    {label:'10-20%',min:10,max:20,n:0,correct:0,totalPred:0},
+    {label:'20-35%',min:20,max:35,n:0,correct:0,totalPred:0},
+    {label:'35-60%',min:35,max:60,n:0,correct:0,totalPred:0},
+    {label:'60%+',min:60,max:100,n:0,correct:0,totalPred:0},
+  ];
+  let valueBets={bets:0,wins:0,pl:0};
+  let topWinCorrect=0,topWinTotal=0,topEdgeCorrect=0,topEdgeTotal=0,totalRaces=0;
+
+  keys.forEach(key=>{
+    const preds=load(key);
+    if(!preds) return;
+    preds.forEach(pred=>{
+      if(!pred.settled) return;
+      totalRaces++;
+      const wname=(pred.winner||'').toLowerCase();
+      const byWin=pred.runners.slice().sort((a,b)=>b.winPct-a.winPct)[0];
+      const byEdge=pred.runners[0];
+      if(byWin){topWinTotal++;if(byWin.name.toLowerCase()===wname)topWinCorrect++;}
+      if(byEdge&&byEdge.isValue){topEdgeTotal++;if(byEdge.name.toLowerCase()===wname)topEdgeCorrect++;}
+      pred.runners.forEach(r=>{
+        const b=buckets.find(bk=>r.winPct>=bk.min&&r.winPct<bk.max);
+        if(b){b.n++;b.totalPred+=r.winPct;if(r.name.toLowerCase()===wname)b.correct++;}
+        if(r.isValue){
+          valueBets.bets++;
+          if(r.name.toLowerCase()===wname){valueBets.wins++;const odds=o2p(r.odds);valueBets.pl+=odds?(100/odds-1):4;}
+          else valueBets.pl-=1;
+        }
+      });
+    });
+  });
+  return {
+    buckets:buckets.map(b=>{
+      const avg=b.n>0?b.totalPred/b.n:0;
+      const actual=b.n>0?(b.correct/b.n)*100:null;
+      const err=actual!=null?actual-avg:null;
+      return{label:b.label,n:b.n,avg:Math.round(avg*10)/10,actual:actual!=null?Math.round(actual*10)/10:null,err:err!=null?Math.round(err*10)/10:null};
+    }),
+    valueBets,totalRaces,
+    topWin:topWinTotal>0?Math.round(topWinCorrect/topWinTotal*100):null,
+    topEdge:topEdgeTotal>0?Math.round(topEdgeCorrect/topEdgeTotal*100):null,
+    topWinTotal,topEdgeTotal
+  };
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
+function setStatus(msg, col) {
+  const el=document.getElementById('statusBar');
+  el.innerHTML=msg?`<span class="spinner"></span>${msg}`:'';
+  el.style.color=col||GREEN;
+}
+function clearStatus() { document.getElementById('statusBar').innerHTML=''; }
+
+function edgeHtml(edge) {
+  if(edge==null) return '';
+  const cls=edge>2?'edge-pos':edge<-3?'edge-neg':'edge-neu';
+  return `<span class="${cls}">${edge>0?'+':''}${edge}%</span>`;
+}
+
+function renderRaceCard(pred, dateKey, allowManual=false) {
+  const byEdge=pred.runners[0];
+  const byWin=pred.runners.slice().sort((a,b)=>b.winPct-a.winPct)[0];
+  const winnerRunner=pred.runners.find(r=>r.winner);
+  const modelOk=winnerRunner&&winnerRunner.name===byWin.name;
+  const edgeOk=winnerRunner&&byEdge.isValue&&winnerRunner.name===byEdge.name;
+
+  const runnersHtml=pred.runners.map(r=>{
+    const isW=r.winner;
+    const cls=pred.settled?(isW?'winner':'faded'):'';
+    const nameClass=isW?'runner-name won':'runner-name';
+    const prefix=isW?'🏆 ':'';
+    return `<div class="runner-row ${cls}">
+      <span class="${nameClass}">${prefix}${r.name}</span>
+      <span class="runner-odds">${r.odds}</span>
+      <span class="runner-win">${r.winPct}%</span>
+      <span class="edge-val">${r.edge!=null?(r.edge>2?`<span class="edge-pos">+${r.edge}%</span>`:r.edge<-3?`<span class="edge-neg">${r.edge}%</span>`:`<span class="edge-neu">${r.edge}%</span>`):'—'}</span>
+      <span class="score-val">${r.score}</span>
+    </div>`;
+  }).join('');
+
+  const resultHtml=pred.settled
+    ?`<div class="race-result">
+        <div class="race-winner-name">${pred.winner}${pred.sp?` (${pred.sp})`:''}</div>
+        ${pred.autoSettled?'<div class="auto-tag">auto-fetched</div>':''}
+        ${modelOk?'<div class="auto-tag" style="color:#00e5a0">Model correct</div>':''}
+        ${edgeOk?'<div class="auto-tag" style="color:#7ee8a2">Edge correct</div>':''}
+      </div>`
+    :`<span class="pending-tag">Pending</span>`;
+
+  const manualHtml=(allowManual&&!pred.settled)
+    ?`<div class="manual-entry">
+        <input class="manual-input" id="mi-${pred.id}" placeholder="Enter winner..." onkeydown="if(event.key==='Enter')saveResult('${dateKey}','${pred.id}')"/>
+        <button class="save-btn" onclick="saveResult('${dateKey}','${pred.id}')">Save</button>
+      </div>`:'';
+
+  return `<div class="race-card ${pred.settled?'settled':'pending'}">
+    <div class="race-header">
+      <div>
+        <div class="race-venue">${pred.venue} ${pred.time}</div>
+        <div class="race-name">${pred.race}</div>
+      </div>
+      ${resultHtml}
+    </div>
+    <div class="race-summary">
+      Edge pick: <strong style="color:${byEdge.isValue?GREEN:'#9a8a6a'}">${byEdge.name} ${byEdge.odds}</strong>${byEdge.edge!=null?' ('+( byEdge.edge>0?'+':'')+byEdge.edge+'%)':''}
+      &nbsp;·&nbsp; Win model: <strong style="color:#f0d060">${byWin.name}</strong> ${byWin.winPct}%
+    </div>
+    <div class="runners">
+      <div class="col-headers"><span>Horse</span><span>Odds</span><span>Mdl%</span><span>Edge</span><span>Scr</span></div>
+      ${runnersHtml}
+    </div>
+    ${manualHtml}
+  </div>`;
+}
+
+// ── SAVE MANUAL RESULT ────────────────────────────────────────────────────────
+function saveResult(dateKey, predId) {
+  const input=document.getElementById(`mi-${predId}`);
+  const winner=(input&&input.value||'').trim();
+  if(!winner) return;
+  const preds=load(`predictions:${dateKey}`)||[];
+  const updated=preds.map(p=>{
+    if(p.id!==predId) return p;
+    return {...p,settled:true,winner,autoSettled:false,
+      runners:p.runners.map(r=>({...r,winner:r.name.toLowerCase()===winner.toLowerCase()}))};
+  });
+  store(`predictions:${dateKey}`,updated);
+  if(dateKey===TODAY) renderTodayPane();
+  else if(dateKey===document.getElementById('activeDate')?.value) renderHistoryDate(dateKey);
+  setStatus(`Saved: ${winner}`,GREEN);
+  setTimeout(clearStatus,2500);
+}
+window.saveResult=saveResult;
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+let activeTab='today';
+function showTab(tab) {
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  ['today','bod','history','calibration','install'].forEach(t=>{
+    document.getElementById(`pane-${t}`).style.display=t===tab?'':'none';
+  });
+  activeTab=tab;
+  if(tab==='calibration') renderCalibration();
+  if(tab==='history') renderHistoryPane();
+  if(tab==='bod') renderBodPane();
+  if(tab==='install') renderInstallPane();
+}
+
+// ── TODAY PANE ────────────────────────────────────────────────────────────────
+function renderTodayPane() {
+  const preds=load(`predictions:${TODAY}`)||[];
+  const settled=preds.filter(p=>p.settled).length;
+  const el=document.getElementById('pane-today');
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:10px;color:#7a8a9a;font-family:'JetBrains Mono',monospace">
+        ${preds.length} races · ${settled} settled
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-blue btn-sm" onclick="triggerFetch()">Fetch yesterday</button>
+        <button class="btn btn-sm" onclick="rerunSims()">Re-run sims</button>
+      </div>
+    </div>
+    ${preds.map(p=>renderRaceCard(p,TODAY,true)).join('')}
+    ${!preds.length?'<div class="empty">No simulations yet. Tap "Re-run sims".</div>':''}
+  `;
+}
+window.triggerFetch=async function() {
+  setStatus(`Fetching ${fmtShort(YESTERDAY)} results...`,BLUE);
+  const preds=load(`predictions:${YESTERDAY}`);
+  if(!preds){setStatus('No predictions stored for yesterday','#f4c430');setTimeout(clearStatus,3000);return;}
+  const fetched=await autoFetchResults(YESTERDAY,preds);
+  if(fetched&&fetched.races&&fetched.races.length>0){
+    const {updated,settled,errors}=applyResults(preds,fetched);
+    store(`predictions:${YESTERDAY}`,updated);
+    store(`fetchlog:${YESTERDAY}`,{at:new Date().toISOString(),settled,errors});
+    setStatus(`Settled ${settled} race${settled!==1?'s':''} from ${fmtShort(YESTERDAY)}`,GREEN);
+  } else {
+    setStatus('No results returned — enter manually',RED);
+  }
+  setTimeout(clearStatus,4000);
+};
+window.rerunSims=async function() {
+  setStatus('Running simulations...');
+  const predictions=TODAY_RACES.map((race,i)=>{
+    const results=runSim(race.runners,race.bigField,54321+i*7);
+    return{id:race.id,date:TODAY,venue:race.venue,time:race.time,race:race.race,
+      bigField:race.bigField,simRun:new Date().toISOString(),runners:results,
+      settled:false,winner:null,sp:null,autoSettled:false};
+  });
+  store(`predictions:${TODAY}`,predictions);
+  renderTodayPane();
+  setStatus(`${predictions.length} simulations stored`,GREEN);
+  setTimeout(clearStatus,3000);
+};
+
+// ── BOT PANE ──────────────────────────────────────────────────────────────────
+function renderBodPane() {
+  const history=getBodHistory();
+  const wins=history.filter(b=>b.result==='WON').length;
+  const losses=history.filter(b=>b.result==='LOST').length;
+  const total=wins+losses;
+  const pl=history.reduce((a,b)=>a+(b.pl||0),0);
+  const plCol=pl>=0?GREEN:RED;
+
+  const histHtml=history.slice().reverse().map(b=>{
+    const won=b.result==='WON';
+    const bdr=won?'rgba(0,229,160,0.3)':b.result==='LOST'?'rgba(255,80,80,0.15)':'rgba(200,168,80,0.2)';
+    return `<div class="history-row" style="border:1px solid ${bdr}">
+      <div>
+        <div class="history-horse" style="color:${won?GREEN:b.result?RED:'#f0d060'}">${b.horse}</div>
+        <div class="history-meta">${b.date} · ${b.betType} ${b.odds}</div>
+        ${b.note?`<div class="history-meta" style="font-style:italic;color:#6a7a8a;margin-top:2px">${b.note}</div>`:''}
+      </div>
+      <div class="history-result" style="color:${won?GREEN:b.result?RED:'#f4c430'}">
+        ${b.result||'Pending'}
+        ${b.pl!=null?`<div style="font-size:10px">${b.pl>=0?'+':''}£${Math.abs(b.pl).toFixed(2)}</div>`:''}
+        ${b.sp?`<div style="font-size:8px;color:#5a6a7a">SP ${b.sp}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('pane-bod').innerHTML=`
+    <div class="bot-banner">
+      <div style="font-size:8px;letter-spacing:3px;color:${GOLD};text-transform:uppercase;margin-bottom:4px;font-family:'JetBrains Mono',monospace">Bet of the Day · ${fmtShort(BOD_TODAY.date)}</div>
+      <div class="bot-horse">${BOD_TODAY.horse}</div>
+      <div class="bot-race">${BOD_TODAY.race}</div>
+      <div class="bot-stats">
+        <div class="bot-stat"><div class="bot-stat-label">Bet</div><div class="bot-stat-val" style="color:${GOLD}">${BOD_TODAY.betType}</div></div>
+        <div class="bot-stat"><div class="bot-stat-label">Odds</div><div class="bot-stat-val" style="color:${GOLD}">${BOD_TODAY.odds}</div></div>
+        <div class="bot-stat"><div class="bot-stat-label">Edge</div><div class="bot-stat-val" style="color:${GREEN}">${BOD_TODAY.edge}</div></div>
+      </div>
+      <div style="font-size:9px;color:#7a9aba;font-weight:600;margin-bottom:6px;font-family:'JetBrains Mono',monospace">WHY THIS BET</div>
+      ${BOD_TODAY.rationale.map(r=>`<div style="font-size:10px;color:#9a8a7a;line-height:1.7;padding-left:8px;border-left:2px solid rgba(200,168,80,0.3);margin-bottom:3px">- ${r}</div>`).join('')}
+      <div style="margin-top:12px;padding:10px;background:rgba(0,0,0,0.2);border-radius:8px">
+        <div style="font-size:9px;color:#7a6a4a;font-family:'JetBrains Mono',monospace;margin-bottom:6px">RETURN CALCULATOR · £5 EW (£10 total)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:10px">
+          <div style="background:rgba(0,229,160,0.08);border-radius:6px;padding:7px;text-align:center">
+            <div style="color:#5a8a6a;font-size:8px;font-family:'JetBrains Mono',monospace">WINS</div>
+            <div style="color:${GREEN};font-weight:700;font-family:'Playfair Display',serif;font-size:14px">+£36.25</div>
+          </div>
+          <div style="background:rgba(100,200,120,0.05);border-radius:6px;padding:7px;text-align:center">
+            <div style="color:#5a8a6a;font-size:8px;font-family:'JetBrains Mono',monospace">PLACES</div>
+            <div style="color:#7ee8a2;font-weight:700;font-family:'Playfair Display',serif;font-size:14px">+£2.50</div>
+          </div>
+          <div style="background:rgba(255,80,80,0.06);border-radius:6px;padding:7px;text-align:center">
+            <div style="color:#7a5a5a;font-size:8px;font-family:'JetBrains Mono',monospace">UNPLACED</div>
+            <div style="color:${RED};font-weight:700;font-family:'Playfair Display',serif;font-size:14px">-£10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:8px;letter-spacing:3px;color:#5a5a5a;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px">Running Record</div>
+    <div class="record-grid" style="margin-bottom:14px">
+      ${[['Settled',total,'#9a8a6a'],['Won',wins,GREEN],['Strike',total>0?Math.round(wins/total*100)+'%':'—','#7ee8a2'],['P/L',(pl>=0?'+':'')+'£'+Math.abs(pl).toFixed(2),plCol]].map(i=>`
+        <div class="record-cell">
+          <div class="record-label">${i[0]}</div>
+          <div class="record-val" style="color:${i[2]}">${i[1]}</div>
+        </div>`).join('')}
+    </div>
+    ${histHtml}
+    <div style="font-size:8px;color:#3a3a3a;text-align:center;margin-top:12px;font-family:'JetBrains Mono',monospace;line-height:1.8">
+      Record from 5 April 2026. Stakes at £5 EW. Entertainment only. 18+.
+    </div>
+  `;
+}
+
+// ── HISTORY PANE ──────────────────────────────────────────────────────────────
+let _activeHistDate=null;
+function renderHistoryPane() {
+  const keys=allKeys('predictions:');
+  const dates=keys.map(k=>k.replace('predictions:',''));
+  const pillsHtml=dates.length
+    ?dates.map(d=>`<div class="date-pill${d===_activeHistDate?' active':''}" onclick="renderHistoryDate('${d}')">${fmtShort(d)}</div>`).join('')
+    :'<div style="color:#5a5a5a;font-size:11px">No history stored yet.</div>';
+
+  const el=document.getElementById('pane-history');
+  el.innerHTML=`
+    <div class="date-pills">${pillsHtml}</div>
+    <div id="hist-content"></div>
+  `;
+  if(_activeHistDate) renderHistoryDate(_activeHistDate);
+}
+window.renderHistoryDate=function(date) {
+  _activeHistDate=date;
+  document.querySelectorAll('.date-pill').forEach(p=>{
+    p.classList.toggle('active',p.textContent===fmtShort(date));
+  });
+  const preds=load(`predictions:${date}`)||[];
+  const settled=preds.filter(p=>p.settled).length;
+  document.getElementById('hist-content').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:11px;color:${GOLD};font-family:'Playfair Display',serif;font-weight:700">${fmtDate(date)}</div>
+      <div style="display:flex;gap:6px">
+        <div style="font-size:9px;color:#7a8a9a;font-family:'JetBrains Mono',monospace">${settled}/${preds.length}</div>
+        <button class="btn btn-blue btn-sm" onclick="fetchHistDate('${date}')">Re-fetch</button>
+      </div>
+    </div>
+    ${preds.map(p=>renderRaceCard(p,date,true)).join('')}
+    ${!preds.length?'<div class="empty">No predictions stored for this date.</div>':''}
+  `;
+};
+window.fetchHistDate=async function(date) {
+  setStatus(`Fetching ${fmtShort(date)}...`,BLUE);
+  const preds=load(`predictions:${date}`)||[];
+  const fetched=await autoFetchResults(date,preds);
+  if(fetched&&fetched.races&&fetched.races.length>0){
+    const {updated,settled}=applyResults(preds,fetched);
+    store(`predictions:${date}`,updated);
+    renderHistoryDate(date);
+    setStatus(`Settled ${settled} races`,GREEN);
+  } else {
+    setStatus('No results returned',RED);
+  }
+  setTimeout(clearStatus,3000);
+};
+
+// ── CALIBRATION PANE ──────────────────────────────────────────────────────────
+function renderCalibration() {
+  const c=calcCalibration();
+  const plCol=c.valueBets.pl>=0?GREEN:RED;
+  const bktHtml=c.buckets.filter(b=>b.n>0).map(b=>{
+    const errCol=b.err==null?'#5a5a5a':Math.abs(b.err)<5?GREEN:Math.abs(b.err)<12?'#f4c430':RED;
+    return `<tr>
+      <td>${b.label}</td>
+      <td>${b.n}</td>
+      <td>${b.avg}%</td>
+      <td style="color:#e8dcc8">${b.actual!=null?b.actual+'%':'—'}</td>
+      <td style="color:${errCol};font-weight:700">${b.err!=null?(b.err>0?'+':'')+b.err+'%':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const signalHtml=c.buckets.filter(b=>b.err!=null&&Math.abs(b.err)>10&&b.n>=5).map(b=>
+    `<div>${b.err<0?`Overconfident in ${b.label}: actual ${b.actual}% vs predicted ${b.avg}% — increase noise SD`:`Underestimates ${b.label}: actual ${b.actual}% vs predicted ${b.avg}% — reduce weight penalties`}</div>`
+  ).join('');
+
+  document.getElementById('pane-calibration').innerHTML=`
+    <div class="cal-grid">
+      ${[['Races',c.totalRaces,'#9a8a6a'],['Top Win%',c.topWin!=null?c.topWin+'%':'—','#7ee8a2'],['Top Edge%',c.topEdge!=null?c.topEdge+'%':'—',BLUE],['Val P/L',(c.valueBets.pl>=0?'+':'')+c.valueBets.pl.toFixed(1)+'u',plCol]].map(i=>`
+        <div class="cal-stat">
+          <div class="cal-stat-label">${i[0]}</div>
+          <div class="cal-stat-value" style="color:${i[2]}">${i[1]}</div>
+        </div>`).join('')}
+    </div>
+
+    <div style="font-size:9px;color:#7a9aba;font-family:'JetBrains Mono',monospace;margin-bottom:10px;line-height:1.7">
+      When model said X% — did the horse actually win at that rate? Green = calibrated. Red = systematic error.
+    </div>
+
+    ${bktHtml?`<table class="cal-table">
+      <thead><tr><th>Bucket</th><th>N</th><th>Pred</th><th>Actual</th><th>Error</th></tr></thead>
+      <tbody>${bktHtml}</tbody>
+    </table>`:'<div class="empty">Record results to build calibration data.</div>'}
+
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(200,168,80,0.15);border-radius:8px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-size:9px;color:${GOLD};font-family:'JetBrains Mono',monospace;margin-bottom:6px;font-weight:700">VALUE BET RECORD (EDGE &gt; 2%)</div>
+      <div style="display:flex;gap:14px;font-size:10px;font-family:'JetBrains Mono',monospace">
+        <span style="color:#7a8a9a">${c.valueBets.bets} bets</span>
+        <span style="color:${GREEN}">${c.valueBets.wins} wins</span>
+        <span style="color:#7a8a9a">Strike: ${c.valueBets.bets>0?Math.round(c.valueBets.wins/c.valueBets.bets*100)+'%':'—'}</span>
+        <span style="color:${plCol};font-weight:700">P/L: ${(c.valueBets.pl>=0?'+':'')+c.valueBets.pl.toFixed(2)}u</span>
+      </div>
+    </div>
+
+    ${signalHtml?`<div class="signal-box"><strong>Model adjustment signals:</strong><br>${signalHtml}</div>`:''}
+
+    <div class="info-box" style="margin-top:12px">
+      <strong>How this improves the model:</strong><br>
+      At 50+ races: calibration buckets have real signal.<br>
+      At 100+ races: factor weights can be tuned directly.<br>
+      Overconfidence → increase noise SD. Underestimating outsiders → reduce weight penalties.
+    </div>
+    ${c.totalRaces<20?`<div style="font-size:9px;color:#4a4a4a;text-align:center;margin-top:10px;font-family:'JetBrains Mono',monospace">${c.totalRaces} races settled. Meaningful at ~50.</div>`:''}
+  `;
+}
+
+// ── INSTALL PANE ──────────────────────────────────────────────────────────────
+function renderInstallPane() {
+  const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+  document.getElementById('pane-install').innerHTML=`
+    ${isStandalone?`<div style="background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.3);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px">
+      <div style="font-size:24px;margin-bottom:8px">✅</div>
+      <div style="font-family:'Playfair Display',serif;font-size:16px;color:${GREEN}">Already installed!</div>
+      <div style="font-size:10px;color:#5a8a7a;margin-top:4px;font-family:'JetBrains Mono',monospace">Running as standalone app</div>
+    </div>`:`
+    <div class="install-banner">
+      <div class="install-title">Add to Home Screen</div>
+      <div class="install-steps">
+        <span>1.</span> Tap the <span>Share button</span> (box with arrow) at the bottom of Safari<br>
+        <span>2.</span> Scroll down and tap <span>"Add to Home Screen"</span><br>
+        <span>3.</span> Name it <span>Race Sim</span> and tap <span>Add</span>
+      </div>
+      <div style="font-size:10px;color:#5a6a7a;font-family:'JetBrains Mono',monospace">Must use Safari, not Chrome</div>
+    </div>`}
+
+    <div class="info-box">
+      <strong>What this app stores (locally on your phone):</strong><br>
+      - Daily race simulations (keyed by date)<br>
+      - Race results after you enter/auto-fetch them<br>
+      - Calibration data building over time<br>
+      - Bet of the Day history<br><br>
+      <strong>Data stays on your device.</strong> Nothing sent to any server except the Claude API call for auto-fetching results.
+    </div>
+
+    <div style="margin-top:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(200,168,80,0.15);border-radius:8px;padding:10px 12px">
+      <div style="font-size:9px;color:${GOLD};font-family:'JetBrains Mono',monospace;margin-bottom:8px;font-weight:700">STORED DATA</div>
+      <div style="font-size:10px;color:#7a8a9a;font-family:'JetBrains Mono',monospace">
+        ${allKeys('predictions:').length} prediction dates<br>
+        ${allKeys('predictions:').reduce((a,k)=>{const p=load(k);return a+(p?p.length:0);},0)} total races<br>
+        ${allKeys('predictions:').reduce((a,k)=>{const p=load(k);return a+(p?p.filter(r=>r.settled).length:0);},0)} settled
+      </div>
+      <button class="btn btn-sm" style="margin-top:8px;background:rgba(255,80,80,0.08);border-color:rgba(255,80,80,0.3);color:${RED}" onclick="clearAll()">Clear all stored data</button>
+    </div>
+  `;
+}
+window.clearAll=function() {
+  if(confirm('Clear all stored race data? This cannot be undone.')) {
+    allKeys('predictions:').forEach(k=>localStorage.removeItem(k));
+    allKeys('fetchlog:').forEach(k=>localStorage.removeItem(k));
+    renderInstallPane();
+    setStatus('All data cleared',RED);
+    setTimeout(clearStatus,3000);
+  }
+};
+
+// ── STARTUP ───────────────────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('dateDisplay').textContent=fmtDate(TODAY);
+
+  // 1. Run today's sims if not stored
+  let preds=load(`predictions:${TODAY}`);
+  if(!preds){
+    setStatus('Running simulations...');
+    const predictions=TODAY_RACES.map((race,i)=>{
+      const results=runSim(race.runners,race.bigField,54321+i*7);
+      return{id:race.id,date:TODAY,venue:race.venue,time:race.time,race:race.race,
+        bigField:race.bigField,simRun:new Date().toISOString(),runners:results,
+        settled:false,winner:null,sp:null,autoSettled:false};
+    });
+    store(`predictions:${TODAY}`,predictions);
+    preds=predictions;
+    setStatus(`${predictions.length} simulations stored`,GREEN);
+    setTimeout(clearStatus,2500);
+  } else {
+    clearStatus();
+  }
+  renderTodayPane();
+
+  // 2. Auto-fetch yesterday if not yet done
+  const fetchDone=load(`fetchlog:${YESTERDAY}`);
+  if(!fetchDone){
+    const yesterdayPreds=load(`predictions:${YESTERDAY}`);
+    if(yesterdayPreds&&yesterdayPreds.some(p=>!p.settled)){
+      setStatus(`Auto-fetching ${fmtShort(YESTERDAY)} results...`,BLUE);
+      const fetched=await autoFetchResults(YESTERDAY,yesterdayPreds);
+      if(fetched&&fetched.races&&fetched.races.length>0){
+        const {updated,settled,errors}=applyResults(yesterdayPreds,fetched);
+        store(`predictions:${YESTERDAY}`,updated);
+        store(`fetchlog:${YESTERDAY}`,{at:new Date().toISOString(),settled,errors});
+        setStatus(`Auto-settled ${settled} race${settled!==1?'s':''} from ${fmtShort(YESTERDAY)}`,GREEN);
+      } else {
+        store(`fetchlog:${YESTERDAY}`,{at:new Date().toISOString(),settled:0,note:'No results from API'});
+        setStatus(`Could not fetch ${fmtShort(YESTERDAY)} — enter manually`,'#f4c430');
+      }
+      setTimeout(clearStatus,4000);
+    } else {
+      store(`fetchlog:${YESTERDAY}`,{at:new Date().toISOString(),settled:0,note:'Already complete or no preds'});
+    }
+  }
+}
+
+// Service worker for offline support
+if('serviceWorker' in navigator) {
+  const swCode=`
+    const CACHE='race-sim-v1';
+    self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./'])));});
+    self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});
+  `;
+  const swBlob=new Blob([swCode],{type:'text/javascript'});
+  const swURL=URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swURL).catch(()=>{});
+}
+
+init();
+</script>
+</body>
+</html>
